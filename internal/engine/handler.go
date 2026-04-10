@@ -112,7 +112,12 @@ func (e *ExecutorEventHandler) HandleEntityEvent(msg *message.Message) error {
 	go func() {
 		defer e.wgEntityEventExecution.Done()
 		if inf.Type == pb.Entity_ENTITY_ARTIFACTS {
-			time.Sleep(ArtifactSignatureWaitPeriod)
+			// Wait for artifact signatures, but allow early exit on shutdown
+			select {
+			case <-time.After(ArtifactSignatureWaitPeriod):
+			case <-msgCtx.Done():
+				return
+			}
 		}
 
 		ctx, cancel := context.WithTimeout(msgCtx, DefaultExecutionTimeout)
